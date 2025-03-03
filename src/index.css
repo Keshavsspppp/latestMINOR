@@ -1,0 +1,7 @@
+@import url('https://fonts.googleapis.com/css2?family=Alumni+Sans+Pinstripe:ital@0;1&family=Funnel+Sans:ital,wght@0,300..800;1,300..800&family=Molengo&family=Rubik:ital,wght@0,300..900;1,300..900&display=swap');
+@import "tailwindcss";
+@import 'leaflet/dist/leaflet.css';
+.custom-marker {
+    background: none;
+    border: none;
+  }
