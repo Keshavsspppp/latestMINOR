@@ -24,17 +24,18 @@ const LatestAnnouncements = () => {
   ]
 
   return (
-    <div className="bg-white rounded-lg shadow-md h-full">
-      <div className="p-4 border-b border-gray-200">
-        <h2 className="text-xl font-semibold text-gray-900">Latest Announcements</h2>
+    // Update the card and text colors
+    <div className="bg-gradient-to-br from-white to-blue-50 rounded-lg shadow-md h-full border border-blue-100">
+      <div className="p-4 border-b border-blue-200">
+        <h2 className="text-xl font-semibold text-[#1a237e]">Latest Announcements</h2>
       </div>
-      <div className="divide-y divide-gray-200">
+      <div className="divide-y divide-blue-100">
         {announcements.map((announcement) => (
           <div 
             key={announcement.id} 
-            className="p-4 hover:bg-gray-50 transition-colors"
+            className="p-4 hover:bg-blue-50/50 transition-colors"
           >
-            <h3 className="font-medium text-blue-800">{announcement.title}</h3>
+            <h3 className="font-medium text-[#0d47a1]">{announcement.title}</h3>
             <p className="text-sm text-gray-600 mt-1 line-clamp-2">
               {announcement.description}
             </p>
@@ -48,10 +49,10 @@ const LatestAnnouncements = () => {
           </div>
         ))}
       </div>
-      <div className="p-4 border-t border-gray-200">
+      <div className="p-4 border-t border-blue-200">
         <Link 
           to="/announcements" 
-          className="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center"
+          className="text-[#1a237e] hover:text-[#0d47a1] font-medium text-sm flex items-center"
         >
           View All Announcements
           <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">

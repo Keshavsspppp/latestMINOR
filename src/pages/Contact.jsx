@@ -1,7 +1,9 @@
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useUser } from '@clerk/clerk-react'
 import { motion } from 'framer-motion'
+import { complaintsApi } from '../services/complaintsApi'
+
 
 const Contact = () => {
   const { isSignedIn, user } = useUser()
@@ -25,26 +27,83 @@ const Contact = () => {
     }
   }
 
+  const [userComplaints, setUserComplaints] = useState([])
+  
+  // Modify the handleSubmit functionbe a Add this effect to load complaints from localStorage when component mounts
+  // Remove this useEffect
+  useEffect(() => {
+    const storedComplaints = localStorage.getItem('complaints')
+    if (storedComplaints) {
+      setComplaints(JSON.parse(storedComplaints))
+    }
+  }, [])
+  
+  // Modify the handleSubmit function to store complaints in localStorage
+  // Modify the handleSubmit function to store image as base64
+  // Replace the useEffect for loading complaints
+  useEffect(() => {
+    const fetchComplaints = async () => {
+      try {
+        const fetchedComplaints = await complaintsApi.getAllComplaints(user?.id)
+        setComplaints(fetchedComplaints)
+      } catch (error) {
+        console.error('Error fetching complaints:', error)
+      }
+    }
+  
+    if (isSignedIn) {
+      fetchComplaints()
+    }
+  }, [isSignedIn, user?.id])
+  
+  // Update the handleSubmit function
   const handleSubmit = (e) => {
     e.preventDefault()
-    const newComplaint = {
-      id: complaints.length + 1,
-      ...formData,
-      status: 'Pending',
-      date: new Date().toISOString(),
-      userId: user?.id
+    
+    // Convert image to base64 before storing
+    const processComplaint = async () => {
+      try {
+        let imageData = null
+        if (formData.image) {
+          const reader = new FileReader()
+          imageData = await new Promise((resolve) => {
+            reader.onloadend = () => resolve(reader.result)
+            reader.readAsDataURL(formData.image)
+          })
+        }
+  
+        const complaintData = {
+          ...formData,
+          image: imageData,
+          status: 'Pending',
+          date: new Date().toISOString(),
+          userId: user?.id,
+          userName: user?.fullName,
+          userEmail: user?.primaryEmailAddress?.emailAddress
+        }
+  
+        const newComplaint = await complaintsApi.createComplaint(complaintData)
+        setComplaints(prev => [newComplaint, ...prev])
+  
+        // Reset form
+        setFormData({
+          name: user?.fullName || '',
+          email: user?.primaryEmailAddress?.emailAddress || '',
+          complaintType: '',
+          location: '',
+          message: '',
+          image: null
+        })
+        setPreviewUrl(null)
+        setIsSubmitted(true)
+        alert('Complaint submitted successfully!')
+      } catch (error) {
+        console.error('Error submitting complaint:', error)
+        alert('Failed to submit complaint. Please try again.')
+      }
     }
-    setComplaints(prev => [newComplaint, ...prev])
-    setFormData({
-      name: '',
-      email: '',
-      complaintType: '',
-      location: '',
-      message: '',
-      image: null
-    })
-    setPreviewUrl(null)
-    setIsSubmitted(true)
+  
+    processComplaint()
   }
 
   return (
@@ -218,7 +277,7 @@ const Contact = () => {
                       {complaint.image && (
                         <div className="w-full md:w-48 flex-shrink-0">
                           <img
-                            src={URL.createObjectURL(complaint.image)}
+                            src={complaint.image} // Use the base64 string directly
                             alt="Complaint"
                             className="w-full h-48 object-cover rounded-lg"
                           />

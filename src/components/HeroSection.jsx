@@ -1,6 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet'
 import { useUser } from '@clerk/clerk-react'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet.fullscreen/Control.FullScreen.css'
@@ -15,64 +15,75 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 })
 
+// Department data
+const departments = [
+  { name: 'Water Supply', color: '#4299E1' },
+  { name: 'Property Tax', color: '#48BB78' },
+  { name: 'Public Health', color: '#F56565' },
+  { name: 'Building Permissions', color: '#ECC94B' },
+  { name: 'Waste Management', color: '#9F7AEA' },
+  { name: 'Urban Planning', color: '#667EEA' },
+  { name: 'Environmental', color: '#ED64A6' },
+  { name: 'Traffic Control', color: '#F6AD55' }
+]
+
+// Initial work locations
+const initialWorkLocations = [
+  {
+    department: 'Public Works',
+    color: '#FF0000',
+    location: [21.2514, 81.6296],
+    work: 'Road Construction',
+    status: 'In Progress',
+    completion: '60%'
+  },
+  {
+    department: 'Water Resources',
+    color: '#0000FF',
+    location: [21.2489, 81.6382],
+    work: 'Pipeline Installation',
+    status: 'Ongoing',
+    completion: '45%'
+  },
+  {
+    department: 'Urban Planning',
+    color: '#008000',
+    location: [21.2431, 81.6297],
+    work: 'Park Development',
+    status: 'Starting',
+    completion: '10%'
+  },
+  {
+    department: 'Environmental',
+    color: '#FFA500',
+    location: [21.2456, 81.6341],
+    work: 'Waste Management',
+    status: 'In Progress',
+    completion: '75%'
+  }
+]
+
+// Map click handler component
+const MapClickHandler = ({ onMapClick }) => {
+  useMapEvents({
+    click: (e) => onMapClick(e)
+  })
+  return null
+}
+
 const HeroSection = () => {
-  const [searchQuery, setSearchQuery] = useState('')
   const [showMap, setShowMap] = useState(true)
+  const [departmentFilter, setDepartmentFilter] = useState('all')
+  const [workLocations, setWorkLocations] = useState(initialWorkLocations)
+  const [isPinMode, setIsPinMode] = useState(false)
+  const [newWorkLocation, setNewWorkLocation] = useState(null)
   const navigate = useNavigate()
   const { isSignedIn } = useUser()
-
-  const handleSearch = (e) => {
-    e.preventDefault()
-    if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery)}`)
-    }
-  }
-
-  const handleCloseMap = () => {
-    setShowMap(false)
-  }
 
   // Raipur coordinates
   const raipurPosition = [21.2514, 81.6296]
 
-  // Department work locations with their specific colors and details
-  const departmentWorks = [
-    {
-      department: 'Public Works',
-      color: '#FF0000',
-      location: [21.2514, 81.6296],
-      work: 'Road Construction',
-      status: 'In Progress',
-      completion: '60%'
-    },
-    {
-      department: 'Water Resources',
-      color: '#0000FF',
-      location: [21.2489, 81.6382],
-      work: 'Pipeline Installation',
-      status: 'Ongoing',
-      completion: '45%'
-    },
-    {
-      department: 'Urban Planning',
-      color: '#008000',
-      location: [21.2431, 81.6297],
-      work: 'Park Development',
-      status: 'Starting',
-      completion: '10%'
-    },
-    {
-      department: 'Environmental',
-      color: '#FFA500',
-      location: [21.2456, 81.6341],
-      work: 'Waste Management',
-      status: 'In Progress',
-      completion: '75%'
-    }
-  ]
-
   // Custom marker icon creator
-  // Remove the default marker icon fix since we're not using it
   const createCustomIcon = (color) => {
     return L.divIcon({
       className: 'custom-marker',
@@ -90,10 +101,40 @@ const HeroSection = () => {
     })
   }
 
+  // Handle map click for adding new work location
+  const handleMapClick = (e) => {
+    if (isPinMode) {
+      setNewWorkLocation({
+        department: departmentFilter,
+        color: departments.find(d => d.name === departmentFilter)?.color || '#666666',
+        location: [e.latlng.lat, e.latlng.lng],
+        work: '',
+        status: 'Planning',
+        completion: '0%'
+      })
+    }
+  }
+
+  // Handle saving new work location
+  const handleSaveLocation = () => {
+    if (newWorkLocation && newWorkLocation.work.trim()) {
+      setWorkLocations([...workLocations, newWorkLocation])
+      setNewWorkLocation(null)
+      setIsPinMode(false)
+    }
+  }
+
+  // Filter work locations
+  const filteredLocations = workLocations.filter(work => 
+    departmentFilter === 'all' || work.department === departmentFilter
+  )
+
   return (
-    <div className="bg-[#2045DB] text-white py-24">
+    <div className="bg-gradient-to-r from-[#1a237e] to-[#0d47a1] text-white py-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-5xl font-bold mb-6">Welcome to Raipur Municipal Corporation</h1>
+        <h1 className="text-5xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-white to-blue-200">
+          Welcome to Raipur Municipal Corporation
+        </h1>
         <p className="text-2xl mb-12">Serving the citizens of Raipur with dedication and excellence</p>
         
         {isSignedIn && showMap && (
@@ -101,7 +142,7 @@ const HeroSection = () => {
             {/* Close Button */}
             <div className="absolute top-4 right-4 z-10">
               <button
-                onClick={handleCloseMap}
+                onClick={() => setShowMap(false)}
                 className="p-2 bg-white rounded-md shadow-md hover:bg-gray-100 transition-colors"
                 title="Close Map"
               >
@@ -122,7 +163,9 @@ const HeroSection = () => {
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               />
               
-              {departmentWorks.map((work, index) => (
+              <MapClickHandler onMapClick={handleMapClick} />
+
+              {filteredLocations.map((work, index) => (
                 <Marker
                   key={index}
                   position={work.location}
@@ -142,27 +185,128 @@ const HeroSection = () => {
                               width: work.completion,
                               backgroundColor: work.color 
                             }}
-                          ></div>
+                          />
                         </div>
                       </div>
                     </div>
                   </Popup>
                 </Marker>
               ))}
+
+              {newWorkLocation && (
+                <Marker
+                  position={newWorkLocation.location}
+                  icon={createCustomIcon(newWorkLocation.color)}
+                >
+                  <Popup>
+                    <div className="p-2">
+                      <h3 className="font-bold text-lg mb-1">New Work Location</h3>
+                      <select
+                        value={newWorkLocation.department}
+                        onChange={(e) => {
+                          const dept = departments.find(d => d.name === e.target.value)
+                          setNewWorkLocation({
+                            ...newWorkLocation,
+                            department: e.target.value,
+                            color: dept?.color || '#666666'
+                          })
+                        }}
+                        className="w-full p-1 border rounded mb-2 text-gray-700"
+                      >
+                        <option value="">Select Department</option>
+                        {departments.map((dept, index) => (
+                          <option key={index} value={dept.name}>
+                            {dept.name}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="text"
+                        placeholder="Work Description"
+                        className="w-full p-1 border rounded mb-2"
+                        value={newWorkLocation.work}
+                        onChange={(e) => setNewWorkLocation({
+                          ...newWorkLocation,
+                          work: e.target.value
+                        })}
+                      />
+                      <select
+                        value={newWorkLocation.status}
+                        onChange={(e) => setNewWorkLocation({
+                          ...newWorkLocation,
+                          status: e.target.value
+                        })}
+                        className="w-full p-1 border rounded mb-2 text-gray-700"
+                      >
+                        <option value="Planning">Planning</option>
+                        <option value="Starting">Starting</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Ongoing">Ongoing</option>
+                        <option value="Completed">Completed</option>
+                      </select>
+                      <button
+                        onClick={handleSaveLocation}
+                        disabled={!newWorkLocation.department || !newWorkLocation.work.trim()}
+                        className="w-full bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 
+                        disabled:bg-gray-400 disabled:cursor-not-allowed"
+                      >
+                        Save Location
+                      </button>
+                    </div>
+                  </Popup>
+                </Marker>
+              )}
             </MapContainer>
 
-            {/* Legend */}
-            <div className="absolute bottom-4 left-4 bg-white p-2 rounded-lg shadow-md z-[1000]">
-              <h4 className="text-sm font-semibold text-gray-700 mb-2">Departments</h4>
-              {departmentWorks.map((work, index) => (
-                <div key={index} className="flex items-center gap-2 text-sm text-gray-600">
-                  <div 
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: work.color }}
-                  ></div>
-                  <span>{work.department}</span>
+            {/* Controls Panel */}
+            <div className="absolute bottom-4 right-4 bg-white p-4 rounded-lg shadow-md z-[1000] min-w-[200px]">
+              <div className="flex flex-col gap-4">
+                {/* Department Filter */}
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Filter Departments</h4>
+                  <select
+                    value={departmentFilter}
+                    onChange={(e) => setDepartmentFilter(e.target.value)}
+                    className="w-full p-2 bg-blue-700 text-white rounded-md shadow-lg border border-blue-800
+                    focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer font-medium"
+                  >
+                    <option value="all" className="bg-white text-gray-700">All Departments</option>
+                    {departments.map((dept, index) => (
+                      <option key={index} value={dept.name} className="bg-white text-gray-700">
+                        {dept.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              ))}
+
+                {/* Pin Mode Toggle */}
+                <div>
+                  <button
+                    onClick={() => setIsPinMode(!isPinMode)}
+                    className={`w-full p-2 rounded-md shadow-md transition-colors ${
+                      isPinMode 
+                        ? 'bg-red-500 text-white hover:bg-red-600' 
+                        : 'bg-green-500 text-white hover:bg-green-600'
+                    }`}
+                  >
+                    {isPinMode ? 'Cancel Pinning' : 'Pin New Location'}
+                  </button>
+                </div>
+
+                {/* Active Departments */}
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Active Departments</h4>
+                  {filteredLocations.map((work, index) => (
+                    <div key={index} className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+                      <div 
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: work.color }}
+                      />
+                      <span>{work.department}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         )}
